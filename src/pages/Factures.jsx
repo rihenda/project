@@ -299,7 +299,7 @@ export default function Factures() {
   const invoices = filterCat === 'all'
     ? allInvoices
     : allInvoices.filter((inv) =>
-        inv.categories.some((c) => {
+        (inv.categories || []).some((c) => {
           const cat = categories.find((k) => k.pennylane_source_id === c.source_id)
           return cat?.id === filterCat
         })
@@ -312,7 +312,7 @@ export default function Factures() {
         <h1 className="text-2xl font-bold text-[#0F172A]">Factures d'achats</h1>
         <p className="text-sm text-[#64748B] mt-1">
           {data ? (
-            <><span className="font-semibold text-[#0F172A]">{data.total_invoices.toLocaleString('fr-FR')}</span> factures en {year}</>
+            <><span className="font-semibold text-[#0F172A]">{(data.total_invoices ?? 0).toLocaleString('fr-FR')}</span> factures en {year}</>
           ) : 'Factures fournisseurs par année d\'émission'}
         </p>
       </div>
@@ -429,7 +429,7 @@ export default function Factures() {
                         {inv.supplier_name}
                       </td>
                       <td className="px-4 py-3">
-                        {inv.categories[0] ? (
+                        {inv.categories?.[0] ? (
                           <span className="text-xs text-[#64748B] bg-slate-100 px-2 py-0.5 rounded-full">
                             {inv.categories[0].label}
                           </span>
