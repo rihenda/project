@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
       paid: inv.paid,
       payment_status: inv.payment_status,
       status: inv.status,
+      label: inv.label || '',
       filename: inv.filename,
       file_url: inv.file_url,
       categories: (inv.categories || []).map((c: any) => ({

@@ -1,50 +1,175 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabase'
+import { extractPeriod, formatPeriod } from '../lib/extractPeriod'
 
 const SUPABASE_URL = 'https://oqqydrbinqdqqvqbfmrv.supabase.co'
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i)
+const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+const MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
 
 const PAYMENT_STATUS = {
-  to_be_paid:      { label: 'À payer',      color: 'bg-orange-100 text-orange-700' },
-  to_be_processed: { label: 'À traiter',    color: 'bg-yellow-100 text-yellow-700' },
-  paid:            { label: 'Payée',         color: 'bg-green-100 text-green-700' },
-  cancelled:       { label: 'Annulée',       color: 'bg-slate-100 text-slate-500' },
-  unpaid:          { label: 'Impayée',       color: 'bg-red-100 text-red-700' },
+  to_be_paid:      { label: 'À payer',   color: 'bg-orange-100 text-orange-700' },
+  to_be_processed: { label: 'À traiter', color: 'bg-yellow-100 text-yellow-700' },
+  paid:            { label: 'Payée',      color: 'bg-green-100 text-green-700' },
+  cancelled:       { label: 'Annulée',    color: 'bg-slate-100 text-slate-500' },
+  unpaid:          { label: 'Impayée',    color: 'bg-red-100 text-red-700' },
 }
 
-function fmt(amount) {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
+function fmt(n) {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
 }
-function fmtDate(str) {
-  if (!str) return '—'
-  const [y, m, d] = str.split('-')
+function fmtDate(s) {
+  if (!s) return '—'
+  const [y, m, d] = s.split('-')
   return `${d}/${m}/${y}`
 }
 
-function StatusBadge({ status }) {
-  const s = PAYMENT_STATUS[status] || { label: status || '—', color: 'bg-slate-100 text-slate-500' }
+// ── Period picker ────────────────────────────────────────────────────────────
+function PeriodCell({ invoice, savedPeriod, onSave }) {
+  const [open, setOpen] = useState(false)
+  const [selYear, setSelYear] = useState(CURRENT_YEAR)
+  const [selMonth, setSelMonth] = useState(null)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  // Determine displayed period: manual override > auto-extracted > null
+  const manual = savedPeriod?.source === 'manual' ? savedPeriod : null
+  const auto = !manual ? extractPeriod(invoice.label, invoice.date) : null
+  const displayed = manual
+    ? { month: manual.billing_month, quarter: manual.billing_quarter, year: manual.billing_year }
+    : auto
+
+  const label = formatPeriod(displayed)
+
+  function openPicker() {
+    const base = displayed || { month: null, year: CURRENT_YEAR }
+    setSelYear(base.year || CURRENT_YEAR)
+    setSelMonth(base.month || null)
+    setOpen(true)
+  }
+
+  async function handleSave() {
+    if (!selMonth) return
+    await onSave(invoice.id, { billing_year: selYear, billing_month: selMonth, billing_quarter: null, source: 'manual' })
+    setOpen(false)
+  }
+
+  async function handleClear() {
+    await onSave(invoice.id, null)
+    setOpen(false)
+  }
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.color}`}>
-      {s.label}
-    </span>
+    <div className="relative" ref={ref}>
+      <button
+        onClick={openPicker}
+        className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 transition-colors ${
+          label
+            ? manual
+              ? 'bg-[#2563EB]/10 text-[#2563EB]'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            : 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-dashed border-slate-300'
+        }`}
+      >
+        {label ? (
+          <>
+            {label}
+            {manual
+              ? <span className="opacity-60 text-[10px]">📌</span>
+              : <span className="opacity-50 text-[10px]">auto</span>
+            }
+          </>
+        ) : (
+          <>
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Période
+          </>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute z-50 left-0 top-8 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-3">
+          {/* Year selector */}
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={() => setSelYear(y => y - 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="font-semibold text-sm text-[#0F172A]">{selYear}</span>
+            <button onClick={() => setSelYear(y => y + 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Month grid */}
+          <div className="grid grid-cols-4 gap-1 mb-3">
+            {MONTHS_SHORT.map((mo, i) => (
+              <button
+                key={i}
+                onClick={() => setSelMonth(i + 1)}
+                className={`py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  selMonth === i + 1
+                    ? 'bg-[#2563EB] text-white'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {mo}
+              </button>
+            ))}
+          </div>
+
+          {/* Auto-detected hint */}
+          {auto && !manual && (
+            <p className="text-xs text-slate-400 mb-2 text-center">
+              Auto-détecté : <span className="font-medium text-slate-500">{formatPeriod(auto)}</span>
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={!selMonth}
+              className="flex-1 bg-[#2563EB] text-white text-xs font-medium py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Confirmer
+            </button>
+            {(manual || auto) && (
+              <button
+                onClick={handleClear}
+                className="px-2.5 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded-lg"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
+// ── Pagination ───────────────────────────────────────────────────────────────
 function Pagination({ current, total, onChange }) {
   if (total <= 1) return null
   const pages = []
-  const delta = 2
-  for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) pages.push(i)
+  for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) pages.push(i)
 
   return (
     <div className="flex items-center justify-center gap-1 py-4">
-      <button
-        onClick={() => onChange(current - 1)}
-        disabled={current === 1}
-        className="px-2 py-1 rounded text-sm text-slate-500 hover:bg-slate-100 disabled:opacity-30"
-      >
-        ←
-      </button>
+      <button onClick={() => onChange(current - 1)} disabled={current === 1}
+        className="px-2 py-1 rounded text-sm text-slate-500 hover:bg-slate-100 disabled:opacity-30">←</button>
       {pages[0] > 1 && (
         <>
           <button onClick={() => onChange(1)} className="px-2.5 py-1 rounded text-sm text-slate-600 hover:bg-slate-100">1</button>
@@ -52,13 +177,8 @@ function Pagination({ current, total, onChange }) {
         </>
       )}
       {pages.map((p) => (
-        <button
-          key={p}
-          onClick={() => onChange(p)}
-          className={`px-2.5 py-1 rounded text-sm font-medium ${
-            p === current ? 'bg-[#2563EB] text-white' : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
+        <button key={p} onClick={() => onChange(p)}
+          className={`px-2.5 py-1 rounded text-sm font-medium ${p === current ? 'bg-[#2563EB] text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
           {p}
         </button>
       ))}
@@ -68,24 +188,22 @@ function Pagination({ current, total, onChange }) {
           <button onClick={() => onChange(total)} className="px-2.5 py-1 rounded text-sm text-slate-600 hover:bg-slate-100">{total}</button>
         </>
       )}
-      <button
-        onClick={() => onChange(current + 1)}
-        disabled={current === total}
-        className="px-2 py-1 rounded text-sm text-slate-500 hover:bg-slate-100 disabled:opacity-30"
-      >
-        →
-      </button>
+      <button onClick={() => onChange(current + 1)} disabled={current === total}
+        className="px-2 py-1 rounded text-sm text-slate-500 hover:bg-slate-100 disabled:opacity-30">→</button>
     </div>
   )
 }
 
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function Factures() {
   const [year, setYear] = useState(CURRENT_YEAR)
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [periods, setPeriods] = useState({}) // invoice_id → row
 
+  // Load invoices
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -104,10 +222,39 @@ export default function Factures() {
     return () => { cancelled = true }
   }, [year, page])
 
-  function handleYearChange(y) {
-    setYear(y)
-    setPage(1)
+  // Load saved periods from Supabase when invoices change
+  useEffect(() => {
+    if (!data?.invoices?.length) return
+    const ids = data.invoices.map((i) => `"${i.id}"`).join(',')
+    supabase
+      .from('invoice_periods')
+      .select('*')
+      .in('invoice_id', data.invoices.map((i) => i.id))
+      .then(({ data: rows }) => {
+        if (!rows) return
+        const map = {}
+        rows.forEach((r) => { map[r.invoice_id] = r })
+        setPeriods(map)
+      })
+  }, [data])
+
+  async function handleSavePeriod(invoiceId, periodData) {
+    if (!periodData) {
+      // Clear manual override → will fall back to auto
+      await supabase.from('invoice_periods').delete().eq('invoice_id', invoiceId).eq('source', 'manual')
+      setPeriods((prev) => {
+        const next = { ...prev }
+        delete next[invoiceId]
+        return next
+      })
+    } else {
+      const row = { invoice_id: invoiceId, ...periodData, updated_at: new Date().toISOString() }
+      await supabase.from('invoice_periods').upsert(row)
+      setPeriods((prev) => ({ ...prev, [invoiceId]: row }))
+    }
   }
+
+  function handleYearChange(y) { setYear(y); setPage(1) }
 
   const invoices = data?.invoices || []
 
@@ -118,11 +265,7 @@ export default function Factures() {
         <h1 className="text-2xl font-bold text-[#0F172A]">Factures d'achats</h1>
         <p className="text-sm text-[#64748B] mt-1">
           {data ? (
-            <>
-              <span className="font-semibold text-[#0F172A]">
-                {data.total_invoices.toLocaleString('fr-FR')}
-              </span> factures en {year}
-            </>
+            <><span className="font-semibold text-[#0F172A]">{data.total_invoices.toLocaleString('fr-FR')}</span> factures en {year}</>
           ) : 'Factures fournisseurs par année d\'émission'}
         </p>
       </div>
@@ -133,15 +276,11 @@ export default function Factures() {
           <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <select
-            value={year}
-            onChange={(e) => handleYearChange(Number(e.target.value))}
-            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer"
-          >
+          <select value={year} onChange={(e) => handleYearChange(Number(e.target.value))}
+            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer">
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-
         {data && (
           <span className="text-sm text-[#64748B] ml-auto">
             Page <span className="font-semibold text-[#0F172A]">{data.current_page}</span> / {data.total_pages}
@@ -149,7 +288,6 @@ export default function Factures() {
         )}
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
@@ -163,65 +301,69 @@ export default function Factures() {
         </div>
       )}
 
-      {/* Table */}
       {!loading && !error && invoices.length > 0 && (
         <>
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Date</th>
+                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Date émission</th>
+                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Période P&L</th>
                   <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">N° Facture</th>
                   <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Fournisseur</th>
                   <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Catégorie</th>
                   <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Statut</th>
                   <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">HT</th>
-                  <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">TVA</th>
                   <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">TTC</th>
                   <th className="text-center px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">PDF</th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv, i) => (
-                  <tr
-                    key={inv.id}
-                    className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}
-                  >
-                    <td className="px-4 py-3 text-[#64748B] whitespace-nowrap">{fmtDate(inv.date)}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-[#0F172A]">{inv.invoice_number || '—'}</td>
-                    <td className="px-4 py-3 font-medium text-[#0F172A] max-w-[180px] truncate" title={inv.supplier_name}>
-                      {inv.supplier_name}
-                    </td>
-                    <td className="px-4 py-3">
-                      {inv.categories[0] ? (
-                        <span className="text-xs text-[#64748B] bg-slate-100 px-2 py-0.5 rounded-full">
-                          {inv.categories[0].label}
+                {invoices.map((inv, i) => {
+                  const status = PAYMENT_STATUS[inv.payment_status] || { label: inv.payment_status || '—', color: 'bg-slate-100 text-slate-500' }
+                  return (
+                    <tr key={inv.id}
+                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}>
+                      <td className="px-4 py-3 text-[#64748B] whitespace-nowrap">{fmtDate(inv.date)}</td>
+                      <td className="px-4 py-3">
+                        <PeriodCell
+                          invoice={inv}
+                          savedPeriod={periods[inv.id] || null}
+                          onSave={handleSavePeriod}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-[#0F172A]">{inv.invoice_number || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-[#0F172A] max-w-[160px] truncate" title={inv.supplier_name}>
+                        {inv.supplier_name}
+                      </td>
+                      <td className="px-4 py-3">
+                        {inv.categories[0] ? (
+                          <span className="text-xs text-[#64748B] bg-slate-100 px-2 py-0.5 rounded-full">
+                            {inv.categories[0].label}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                          {status.label}
                         </span>
-                      ) : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={inv.payment_status} />
-                    </td>
-                    <td className="px-4 py-3 text-right text-[#0F172A]">{fmt(inv.amount_ht)}</td>
-                    <td className="px-4 py-3 text-right text-[#64748B]">{fmt(inv.amount_tax)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-[#0F172A]">{fmt(inv.amount_ttc)}</td>
-                    <td className="px-4 py-3 text-center">
-                      {inv.file_url ? (
-                        <a
-                          href={inv.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB]/10 hover:text-[#2563EB] text-slate-400 transition-colors"
-                          title="Voir le PDF"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </a>
-                      ) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-right text-[#0F172A]">{fmt(inv.amount_ht)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#0F172A]">{fmt(inv.amount_ttc)}</td>
+                      <td className="px-4 py-3 text-center">
+                        {inv.file_url ? (
+                          <a href={inv.file_url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB]/10 hover:text-[#2563EB] text-slate-400 transition-colors"
+                            title="Voir le PDF">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </a>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
