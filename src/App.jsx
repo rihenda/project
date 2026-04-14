@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Fournisseurs from './pages/Fournisseurs'
 import Factures from './pages/Factures'
-import Dashboard from './pages/Dashboard'
 import './index.css'
 
 function App() {
@@ -15,7 +14,6 @@ function App() {
             <Route path="/" element={<Navigate to="/fournisseurs" replace />} />
             <Route path="/fournisseurs" element={<Fournisseurs />} />
             <Route path="/factures" element={<Factures />} />
-            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
       </div>
