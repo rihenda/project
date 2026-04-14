@@ -275,7 +275,6 @@ export default function Factures() {
           body: JSON.stringify({
             invoice_id: invoiceId,
             invoice_number: inv.invoice_number,
-            invoice_date: inv.date,
             period_label,
           }),
         }).catch((e) => console.error('update-invoice-label error:', e))
