@@ -228,7 +228,9 @@ export default function Factures() {
     const params = new URLSearchParams({ year, page })
     if (month) params.set('month', month)
 
-    fetch(`${SUPABASE_URL}/functions/v1/get-invoices?${params}`)
+    fetch(`${SUPABASE_URL}/functions/v1/get-invoices?${params}`, {
+      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    })
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return
