@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Navbar from './components/Navbar'
+import Sidebar from './components/Sidebar'
 import Fournisseurs from './pages/Fournisseurs'
 import Factures from './pages/Factures'
 import './index.css'
@@ -7,9 +7,9 @@ import './index.css'
 function App() {
   return (
     <BrowserRouter>
-      <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
-        <Navbar />
-        <main className="flex-1">
+      <div className="flex min-h-screen bg-[#F1F5F9]">
+        <Sidebar />
+        <main className="flex-1 ml-[224px] min-h-screen">
           <Routes>
             <Route path="/" element={<Navigate to="/fournisseurs" replace />} />
             <Route path="/fournisseurs" element={<Fournisseurs />} />

@@ -308,176 +308,189 @@ export default function Factures() {
       )
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#0F172A]">Factures d'achats</h1>
-        <p className="text-sm text-[#64748B] mt-1">
-          {data ? (
-            <><span className="font-semibold text-[#0F172A]">{(data.total_invoices ?? 0).toLocaleString('fr-FR')}</span> factures en {year}</>
-          ) : 'Factures fournisseurs par année d\'émission'}
-        </p>
+    <div className="min-h-screen">
+      {/* Page header */}
+      <div className="bg-white border-b border-slate-200 px-8 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-xs text-slate-400 mb-1 font-medium">
+              <span>HostnFly</span>
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <span>Factures</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Factures d'achats</h1>
+          </div>
+          {data && !loading && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">
+                {month
+                  ? `${allInvoices.length} résultat${allInvoices.length !== 1 ? 's' : ''} · ${MONTHS_FR[month - 1]} ${year}`
+                  : `${(data.total_invoices ?? 0).toLocaleString('fr-FR')} factures · ${year}`}
+              </span>
+              {loading && <div className="w-3.5 h-3.5 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="px-8 py-5">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2 mb-5">
 
-        {/* Year */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
-          <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <select value={year} onChange={(e) => handleYearChange(e.target.value)}
-            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer">
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-
-        {/* Month */}
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm">
-          <button
-            onClick={() => handleMonthChange(null)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-              !month ? 'bg-[#2563EB] text-white' : 'text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            Tous
-          </button>
-          {MONTHS_SHORT.map((mo, i) => (
-            <button
-              key={i}
-              onClick={() => handleMonthChange(month === i + 1 ? null : i + 1)}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                month === i + 1 ? 'bg-[#2563EB] text-white' : 'text-slate-500 hover:bg-slate-100'
-              }`}
-            >
-              {mo}
-            </button>
-          ))}
-        </div>
-
-        {/* Category */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
-          <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-          </svg>
-          <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)}
-            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer max-w-[200px]">
-            <option value="all">Toutes les catégories</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-
-        {/* Count */}
-        {data && !loading && (
-          <span className="text-sm text-[#64748B] ml-auto">
-            {filterCat !== 'all' ? (
-              <><span className="font-semibold text-[#0F172A]">{invoices.length}</span> / {allInvoices.length} factures</>
-            ) : month ? (
-              <><span className="font-semibold text-[#0F172A]">{allInvoices.length}</span> factures en {MONTHS_FR[month - 1]} {year}</>
-            ) : (
-              <>Page <span className="font-semibold text-[#0F172A]">{data.current_page}</span> / {data.total_pages}</>
-            )}
-          </span>
-        )}
-      </div>
-
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[#64748B]">Chargement des factures {year}…</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-          Erreur : {error}
-        </div>
-      )}
-
-      {!loading && !error && invoices.length > 0 && (
-        <>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Date émission</th>
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Période P&L</th>
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">N° Facture</th>
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Fournisseur</th>
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Catégorie</th>
-                  <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Statut</th>
-                  <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">HT</th>
-                  <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">TTC</th>
-                  <th className="text-center px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">PDF</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv, i) => {
-                  const status = PAYMENT_STATUS[inv.payment_status] || { label: inv.payment_status || '—', color: 'bg-slate-100 text-slate-500' }
-                  return (
-                    <tr key={inv.id}
-                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}>
-                      <td className="px-4 py-3 text-[#64748B] whitespace-nowrap">{fmtDate(inv.date)}</td>
-                      <td className="px-4 py-3">
-                        <PeriodCell
-                          invoice={inv}
-                          savedPeriod={periods[inv.id] || null}
-                          onSave={handleSavePeriod}
-                        />
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-[#0F172A]">{inv.invoice_number || '—'}</td>
-                      <td className="px-4 py-3 font-medium text-[#0F172A] max-w-[160px] truncate" title={inv.supplier_name}>
-                        {inv.supplier_name}
-                      </td>
-                      <td className="px-4 py-3">
-                        {inv.categories?.[0] ? (
-                          <span className="text-xs text-[#64748B] bg-slate-100 px-2 py-0.5 rounded-full">
-                            {inv.categories[0].label}
-                          </span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-[#0F172A]">{fmt(inv.amount_ht)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#0F172A]">{fmt(inv.amount_ttc)}</td>
-                      <td className="px-4 py-3 text-center">
-                        {inv.file_url ? (
-                          <button
-                            onClick={() => setPdfUrl(inv.file_url)}
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB]/10 hover:text-[#2563EB] text-slate-400 transition-colors"
-                            title="Voir le PDF">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </button>
-                        ) : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          {/* Year */}
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors">
+            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <select value={year} onChange={(e) => handleYearChange(e.target.value)}
+              className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none cursor-pointer">
+              {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
 
-          {!month && (
-            <Pagination
-              current={page}
-              total={data.total_pages}
-              onChange={(p) => { setPage(p); window.scrollTo(0, 0) }}
-            />
-          )}
-        </>
-      )}
+          {/* Month pills */}
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <button
+              onClick={() => handleMonthChange(null)}
+              className={`px-2.5 py-1 rounded-md text-[12px] font-semibold transition-all ${
+                !month ? 'bg-[#2563EB] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              }`}
+            >
+              Tous
+            </button>
+            {MONTHS_SHORT.map((mo, i) => (
+              <button
+                key={i}
+                onClick={() => handleMonthChange(month === i + 1 ? null : i + 1)}
+                className={`px-2 py-1 rounded-md text-[12px] font-semibold transition-all ${
+                  month === i + 1 ? 'bg-[#2563EB] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                }`}
+              >
+                {mo}
+              </button>
+            ))}
+          </div>
 
-      {!loading && !error && invoices.length === 0 && (
-        <div className="text-center py-16 text-[#64748B]">
-          Aucune facture trouvée pour {year}
+          {/* Category */}
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors">
+            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)}
+              className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none cursor-pointer max-w-[220px]">
+              <option value="all">Toutes les catégories</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+
+          {filterCat !== 'all' && (
+            <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
+              {invoices.length} / {allInvoices.length}
+            </span>
+          )}
         </div>
-      )}
+
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-32 gap-3">
+            <div className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+            <p className="text-[13px] text-slate-400">Chargement…</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && invoices.length > 0 && (
+          <>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Date</th>
+                    <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Période P&L</th>
+                    <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">N° Facture</th>
+                    <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Fournisseur</th>
+                    <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Catégorie</th>
+                    <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Statut</th>
+                    <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">HT</th>
+                    <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">TTC</th>
+                    <th className="px-5 py-3.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {invoices.map((inv) => {
+                    const status = PAYMENT_STATUS[inv.payment_status] || { label: inv.payment_status || '—', color: 'bg-slate-100 text-slate-500' }
+                    return (
+                      <tr key={inv.id} className="hover:bg-slate-50/70 transition-colors group">
+                        <td className="px-5 py-3.5 text-[13px] text-slate-500 whitespace-nowrap tabular-nums">{fmtDate(inv.date)}</td>
+                        <td className="px-5 py-3.5">
+                          <PeriodCell invoice={inv} savedPeriod={periods[inv.id] || null} onSave={handleSavePeriod} />
+                        </td>
+                        <td className="px-5 py-3.5 font-mono text-[12px] text-slate-600">{inv.invoice_number || '—'}</td>
+                        <td className="px-5 py-3.5 max-w-[160px]">
+                          <span className="text-[13px] font-semibold text-slate-800 truncate block" title={inv.supplier_name}>
+                            {inv.supplier_name}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {inv.categories?.[0] ? (
+                            <span className="text-[12px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                              {inv.categories[0].label}
+                            </span>
+                          ) : <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-semibold ${status.color}`}>
+                            {status.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right text-[13px] text-slate-600 tabular-nums">{fmt(inv.amount_ht)}</td>
+                        <td className="px-5 py-3.5 text-right text-[13px] font-bold text-slate-800 tabular-nums">{fmt(inv.amount_ttc)}</td>
+                        <td className="px-5 py-3.5 text-center">
+                          {inv.file_url ? (
+                            <button
+                              onClick={() => setPdfUrl(inv.file_url)}
+                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB] hover:text-white text-slate-400 transition-all inline-flex items-center justify-center opacity-0 group-hover:opacity-100"
+                              title="Voir le PDF">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {!month && (
+              <Pagination
+                current={page}
+                total={data.total_pages}
+                onChange={(p) => { setPage(p); window.scrollTo(0, 0) }}
+              />
+            )}
+          </>
+        )}
+
+        {!loading && !error && invoices.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+              <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <p className="text-[13px] font-semibold text-slate-500">Aucune facture</p>
+            <p className="text-[12px] text-slate-400 mt-0.5">{month ? `${MONTHS_FR[month - 1]} ${year}` : year}</p>
+          </div>
+        )}
+      </div>
 
       {/* PDF modal */}
       {pdfUrl && (
