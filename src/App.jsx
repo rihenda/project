@@ -1,18 +1,21 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import Fournisseurs from './pages/Fournisseurs'
 import './index.css'
 
 function App() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
-      <Navbar />
-
-      {/* Main content area — features will go here */}
-      <main className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-400 text-sm">Outil Finance HostnFly</p>
-        </div>
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
+        <Navbar />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Navigate to="/fournisseurs" replace />} />
+            <Route path="/fournisseurs" element={<Fournisseurs />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   )
 }
 
