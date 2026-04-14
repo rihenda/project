@@ -1,5 +1,4 @@
 const PENNYLANE_TOKEN = Deno.env.get('PENNYLANE_TOKEN')
-const BASE_URL_V1 = 'https://app.pennylane.com/api/external/v1'
 const BASE_URL_V2 = 'https://app.pennylane.com/api/external/v2'
 
 const CORS = {
@@ -7,25 +6,43 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, content-type',
 }
 
-const headers = () => ({
+const hdrs = () => ({
   Authorization: `Bearer ${PENNYLANE_TOKEN}`,
   'Content-Type': 'application/json',
 })
 
-// Find the ledger entry for a given invoice (piece_number = invoice v1 id)
-async function findLedgerEntry(invoiceId: string) {
-  const filter = JSON.stringify([{ field: 'piece_number', operator: 'eq', value: invoiceId }])
-  const params = new URLSearchParams({ filter })
-  const res = await fetch(`${BASE_URL_V2}/ledger_entries?${params}`, { headers: headers() })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Failed to fetch ledger entries: ${res.status} ${text}`)
+// Find the ledger entry for a given invoice by scanning date-filtered results
+// Returns the most recent entry (highest id) with matching piece_number
+async function findLedgerEntry(invoiceId: string, invoiceDate: string) {
+  const filter = JSON.stringify([{ field: 'date', operator: 'eq', value: invoiceDate }])
+  let cursor: string | null = null
+  let best: any = null
+  let iterations = 0
+
+  while (iterations < 20) {
+    iterations++
+    const params = new URLSearchParams({ filter, limit: '50' })
+    if (cursor) params.set('cursor', cursor)
+
+    const res = await fetch(`${BASE_URL_V2}/ledger_entries?${params}`, { headers: hdrs() })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Failed to fetch ledger entries: ${res.status} ${text}`)
+    }
+    const data = await res.json()
+    const items: any[] = data.items || []
+
+    for (const e of items) {
+      if (e.piece_number === invoiceId) {
+        if (!best || e.id > best.id) best = e
+      }
+    }
+
+    if (!data.has_more || !data.next_cursor) break
+    cursor = data.next_cursor
   }
-  const data = await res.json()
-  const entries = data.ledger_entries || data.entries || data
-  if (!Array.isArray(entries) || entries.length === 0) return null
-  // Return the most recent one (highest id)
-  return entries.sort((a: any, b: any) => b.id - a.id)[0]
+
+  return best
 }
 
 Deno.serve(async (req) => {
@@ -39,76 +56,89 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { invoice_id, invoice_number, period_label } = body
-    // invoice_id: Pennylane v1 invoice ID (e.g. "PXFMMYGCGL")
-    // invoice_number: human-readable invoice number (e.g. "F-(2025)-(01)09202645")
-    // period_label: P&L period string (e.g. "04.2026" or "T1 2025")
+    const { invoice_id, invoice_number, invoice_date, period_label } = body
 
-    if (!invoice_id || !invoice_number || !period_label) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: invoice_id, invoice_number, period_label' }), {
+    if (!invoice_id || !invoice_number || !invoice_date || !period_label) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: invoice_id, invoice_number, invoice_date, period_label' }), {
         status: 400, headers: { 'Content-Type': 'application/json', ...CORS },
       })
     }
 
     const newLabel = `${invoice_number} / ${period_label}`
 
-    // Step 1: Find the ledger entry
-    const entry = await findLedgerEntry(invoice_id)
+    // Step 1: Find the ledger entry by date + piece_number scan
+    const entry = await findLedgerEntry(invoice_id, invoice_date)
     if (!entry) {
-      return new Response(JSON.stringify({ error: `No ledger entry found for invoice ${invoice_id}` }), {
+      return new Response(JSON.stringify({ error: `No ledger entry found for invoice ${invoice_id} on ${invoice_date}` }), {
         status: 404, headers: { 'Content-Type': 'application/json', ...CORS },
       })
     }
 
     const entryId = entry.id
-    const date = entry.date
-    const due_date = entry.due_date
     const journal_id = entry.journal?.id || entry.journal_id
-    const lines = (entry.ledger_entry_lines || []).map((line: any) => ({
+    const date = entry.date
+
+    // Step 2: Try PUT first (works for API-created entries, preserves lines automatically)
+    const putRes = await fetch(`${BASE_URL_V2}/ledger_entries/${entryId}`, {
+      method: 'PUT',
+      headers: hdrs(),
+      body: JSON.stringify({ label: newLabel, date, journal_id, piece_number: invoice_id }),
+    })
+
+    if (putRes.ok) {
+      const putData = await putRes.json()
+      return new Response(
+        JSON.stringify({ success: true, method: 'PUT', label: newLabel, ledger_entry_id: putData.id }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } }
+      )
+    }
+
+    const putError = await putRes.json().catch(() => ({}))
+
+    // Step 3: Fallback → fetch full entry detail for lines, DELETE + POST
+    const detailRes = await fetch(`${BASE_URL_V2}/ledger_entries/${entryId}`, { headers: hdrs() })
+    if (!detailRes.ok) throw new Error(`Failed to fetch entry detail: ${detailRes.status}`)
+    const detail = await detailRes.json()
+
+    const lines = (detail.ledger_entry_lines || []).map((line: any) => ({
       debit: line.debit,
       credit: line.credit,
       label: line.label || '',
       ledger_account_id: line.ledger_account?.id || line.ledger_account_id,
     }))
 
-    if (!journal_id || lines.length === 0) {
-      return new Response(JSON.stringify({ error: 'Ledger entry missing journal_id or lines', entry }), {
-        status: 422, headers: { 'Content-Type': 'application/json', ...CORS },
-      })
+    if (lines.length === 0) {
+      throw new Error(`PUT failed (${putRes.status}: ${JSON.stringify(putError)}) and entry has no lines to re-POST`)
     }
 
-    // Step 2: DELETE the existing entry
     const delRes = await fetch(`${BASE_URL_V2}/ledger_entries/${entryId}`, {
       method: 'DELETE',
-      headers: headers(),
+      headers: hdrs(),
     })
     if (!delRes.ok && delRes.status !== 204) {
       const text = await delRes.text()
-      throw new Error(`DELETE failed: ${delRes.status} ${text}`)
+      throw new Error(`PUT failed (${JSON.stringify(putError)}) and DELETE also failed: ${delRes.status} ${text}`)
     }
 
-    // Step 3: POST new entry with updated label, same piece_number
-    const payload = {
+    const payload: any = {
       label: newLabel,
       date,
-      due_date,
       journal_id,
       piece_number: invoice_id,
       ledger_entry_lines: lines,
     }
+    if (detail.due_date) payload.due_date = detail.due_date
 
     const postRes = await fetch(`${BASE_URL_V2}/ledger_entries`, {
       method: 'POST',
-      headers: headers(),
+      headers: hdrs(),
       body: JSON.stringify(payload),
     })
     const postData = await postRes.json()
-    if (!postRes.ok) {
-      throw new Error(`POST failed: ${postRes.status} ${JSON.stringify(postData)}`)
-    }
+    if (!postRes.ok) throw new Error(`POST failed: ${postRes.status} ${JSON.stringify(postData)}`)
 
     return new Response(
-      JSON.stringify({ success: true, label: newLabel, ledger_entry_id: postData.id }),
+      JSON.stringify({ success: true, method: 'DELETE+POST', label: newLabel, ledger_entry_id: postData.id }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } }
     )
   } catch (err: any) {
