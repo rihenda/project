@@ -263,6 +263,22 @@ export default function Factures() {
       const row = { invoice_id: invoiceId, ...periodData, updated_at: new Date().toISOString() }
       await supabase.from('invoice_periods').upsert(row)
       setPeriods((prev) => ({ ...prev, [invoiceId]: row }))
+
+      // Write the label into Pennylane's "Libellé de l'écriture"
+      const inv = (data?.invoices || []).find((i) => i.id === invoiceId)
+      if (inv?.invoice_number && periodData.billing_month && periodData.billing_year) {
+        const pad = (n) => String(n).padStart(2, '0')
+        const period_label = `${pad(periodData.billing_month)}.${periodData.billing_year}`
+        fetch(`${SUPABASE_URL}/functions/v1/update-invoice-label`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invoice_id: invoiceId,
+            invoice_number: inv.invoice_number,
+            period_label,
+          }),
+        }).catch((e) => console.error('update-invoice-label error:', e))
+      }
     }
   }
 
