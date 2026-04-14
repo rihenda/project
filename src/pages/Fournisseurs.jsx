@@ -20,8 +20,9 @@ function fmt(amount) {
 // ── Category pill ────────────────────────────────────────────────────────────
 function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign }) {
   const [open, setOpen] = useState(false)
-  const [newName, setNewName] = useState('')
+  const [search, setSearch] = useState('')
   const ref = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -29,16 +30,22 @@ function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  useEffect(() => {
+    if (open) { setSearch(''); setTimeout(() => inputRef.current?.focus(), 50) }
+  }, [open])
+
   const current = categories.find((c) => c.id === supplier.category_id)
+  const filtered = categories.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  )
+  const noMatch = search.trim() && filtered.length === 0
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-          current
-            ? 'text-white'
-            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+          current ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
         }`}
         style={current ? { backgroundColor: current.color } : {}}
       >
@@ -49,31 +56,62 @@ function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign }) {
       </button>
 
       {open && (
-        <div className="absolute z-50 left-0 top-8 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 overflow-hidden">
-          {categories.length > 0 && (
-            <>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => { onAssign(supplier, cat); setOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
-                >
-                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  <span className="text-[#0F172A]">{cat.name}</span>
-                  {cat.id === supplier.category_id && (
-                    <svg className="w-3.5 h-3.5 text-[#2563EB] ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-              <div className="border-t border-slate-100 my-1" />
-            </>
-          )}
+        <div className="absolute z-50 left-0 top-8 w-64 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+          {/* Search */}
+          <div className="px-3 pt-2 pb-1 border-b border-slate-100">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Rechercher une catégorie…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && noMatch) {
+                  onCreateAndAssign(supplier, search.trim())
+                  setOpen(false)
+                }
+              }}
+              className="w-full text-sm outline-none placeholder-slate-400 py-1"
+            />
+          </div>
+
+          {/* List */}
+          <div className="max-h-52 overflow-y-auto py-1">
+            {filtered.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => { onAssign(supplier, cat); setOpen(false) }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+              >
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                <span className="text-[#0F172A] flex-1">{cat.name}</span>
+                {cat.pennylane_source_id && (
+                  <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">PL</span>
+                )}
+                {cat.id === supplier.category_id && (
+                  <svg className="w-3.5 h-3.5 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            ))}
+
+            {noMatch && (
+              <button
+                onClick={() => { onCreateAndAssign(supplier, search.trim()); setOpen(false) }}
+                className="w-full text-left px-3 py-2 text-sm text-[#2563EB] hover:bg-blue-50 flex items-center gap-2"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Créer "{search.trim()}"
+              </button>
+            )}
+          </div>
 
           {/* Remove */}
           {current && (
-            <>
+            <div className="border-t border-slate-100 py-1">
               <button
                 onClick={() => { onAssign(supplier, null); setOpen(false) }}
                 className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2"
@@ -83,29 +121,8 @@ function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign }) {
                 </svg>
                 Retirer la catégorie
               </button>
-              <div className="border-t border-slate-100 my-1" />
-            </>
+            </div>
           )}
-
-          {/* Create new */}
-          <div className="px-3 py-2">
-            <input
-              type="text"
-              placeholder="Nouvelle catégorie…"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newName.trim()) {
-                  onCreateAndAssign(supplier, newName.trim())
-                  setNewName('')
-                  setOpen(false)
-                }
-              }}
-              className="w-full text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-[#2563EB] placeholder-slate-400"
-              autoFocus
-            />
-            <p className="text-xs text-slate-400 mt-1">Appuie sur Entrée pour créer</p>
-          </div>
         </div>
       )}
     </div>
