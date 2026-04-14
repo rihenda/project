@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { formatPeriod } from '../lib/extractPeriod'
 
 const SUPABASE_URL = 'https://oqqydrbinqdqqvqbfmrv.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xcXlkcmJpbnFkcXF2cWJmbXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjExNzUsImV4cCI6MjA5MTczNzE3NX0.zLNggRnCtvHN7mPrI726ZEDnKLtv-y-YqCMdsVzWWGE'
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i)
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
@@ -31,6 +32,7 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
   const [open, setOpen] = useState(false)
   const [selYear, setSelYear] = useState(CURRENT_YEAR)
   const [selMonth, setSelMonth] = useState(null)
+  const [saving, setSaving] = useState(false)
   const btnRef = useRef(null)
   const dropRef = useRef(null)
   const [pos, setPos] = useState({ top: 0, left: 0 })
@@ -62,7 +64,9 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
 
   async function handleSave() {
     if (!selMonth) return
+    setSaving(true)
     await onSave(invoice.id, { billing_year: selYear, billing_month: selMonth, billing_quarter: null, source: 'manual' })
+    setSaving(false)
     setOpen(false)
   }
 
@@ -136,10 +140,15 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              disabled={!selMonth}
-              className="flex-1 bg-[#2563EB] text-white text-xs font-medium py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!selMonth || saving}
+              className="flex-1 bg-[#2563EB] text-white text-xs font-medium py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
             >
-              Confirmer
+              {saving ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Envoi…
+                </>
+              ) : 'Confirmer'}
             </button>
             {savedPeriod && (
               <button
@@ -265,9 +274,12 @@ export default function Factures() {
       if (inv?.invoice_number && periodData.billing_month && periodData.billing_year) {
         const pad = (n) => String(n).padStart(2, '0')
         const period_label = `${pad(periodData.billing_month)}.${periodData.billing_year}`
-        fetch(`${SUPABASE_URL}/functions/v1/update-invoice-label`, {
+        await fetch(`${SUPABASE_URL}/functions/v1/update-invoice-label`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify({
             invoice_id: invoiceId,
             invoice_number: inv.invoice_number,
