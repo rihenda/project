@@ -211,6 +211,7 @@ export default function Factures() {
   const [periods, setPeriods] = useState({})
   const [filterCat, setFilterCat] = useState('all')
   const [categories, setCategories] = useState([])
+  const [pdfUrl, setPdfUrl] = useState(null)
 
   // Load categories from Supabase once
   useEffect(() => {
@@ -443,13 +444,14 @@ export default function Factures() {
                       <td className="px-4 py-3 text-right font-semibold text-[#0F172A]">{fmt(inv.amount_ttc)}</td>
                       <td className="px-4 py-3 text-center">
                         {inv.file_url ? (
-                          <a href={inv.file_url} target="_blank" rel="noopener noreferrer"
+                          <button
+                            onClick={() => setPdfUrl(inv.file_url)}
                             className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB]/10 hover:text-[#2563EB] text-slate-400 transition-colors"
                             title="Voir le PDF">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                          </a>
+                          </button>
                         ) : '—'}
                       </td>
                     </tr>
@@ -472,6 +474,37 @@ export default function Factures() {
       {!loading && !error && invoices.length === 0 && (
         <div className="text-center py-16 text-[#64748B]">
           Aucune facture trouvée pour {year}
+        </div>
+      )}
+
+      {/* PDF modal */}
+      {pdfUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setPdfUrl(null)}
+        >
+          <div
+            className="relative bg-white rounded-xl shadow-2xl flex flex-col"
+            style={{ width: '90vw', height: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+              <span className="text-sm font-medium text-[#0F172A]">Facture</span>
+              <button
+                onClick={() => setPdfUrl(null)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <iframe
+              src={pdfUrl}
+              className="flex-1 w-full rounded-b-xl"
+              title="Facture PDF"
+            />
+          </div>
         </div>
       )}
     </div>
