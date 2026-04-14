@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { extractPeriod, formatPeriod } from '../lib/extractPeriod'
+import { formatPeriod } from '../lib/extractPeriod'
 
 const SUPABASE_URL = 'https://oqqydrbinqdqqvqbfmrv.supabase.co'
 const CURRENT_YEAR = new Date().getFullYear()
@@ -38,19 +38,15 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  // Determine displayed period: manual override > auto-extracted > null
-  const manual = savedPeriod?.source === 'manual' ? savedPeriod : null
-  const auto = !manual ? extractPeriod(invoice.label, invoice.date) : null
-  const displayed = manual
-    ? { month: manual.billing_month, quarter: manual.billing_quarter, year: manual.billing_year }
-    : auto
+  const displayed = savedPeriod
+    ? { month: savedPeriod.billing_month, quarter: savedPeriod.billing_quarter, year: savedPeriod.billing_year }
+    : null
 
   const label = formatPeriod(displayed)
 
   function openPicker() {
-    const base = displayed || { month: null, year: CURRENT_YEAR }
-    setSelYear(base.year || CURRENT_YEAR)
-    setSelMonth(base.month || null)
+    setSelYear(displayed?.year || CURRENT_YEAR)
+    setSelMonth(displayed?.month || null)
     setOpen(true)
   }
 
@@ -71,20 +67,12 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
         onClick={openPicker}
         className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 transition-colors ${
           label
-            ? manual
-              ? 'bg-[#2563EB]/10 text-[#2563EB]'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ? 'bg-[#2563EB]/10 text-[#2563EB]'
             : 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-dashed border-slate-300'
         }`}
       >
         {label ? (
-          <>
-            {label}
-            {manual
-              ? <span className="opacity-60 text-[10px]">📌</span>
-              : <span className="opacity-50 text-[10px]">auto</span>
-            }
-          </>
+          <>{label}</>
         ) : (
           <>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -129,13 +117,6 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
             ))}
           </div>
 
-          {/* Auto-detected hint */}
-          {auto && !manual && (
-            <p className="text-xs text-slate-400 mb-2 text-center">
-              Auto-détecté : <span className="font-medium text-slate-500">{formatPeriod(auto)}</span>
-            </p>
-          )}
-
           {/* Actions */}
           <div className="flex gap-2">
             <button
@@ -145,7 +126,7 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
             >
               Confirmer
             </button>
-            {(manual || auto) && (
+            {savedPeriod && (
               <button
                 onClick={handleClear}
                 className="px-2.5 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded-lg"
@@ -252,8 +233,7 @@ export default function Factures() {
 
   async function handleSavePeriod(invoiceId, periodData) {
     if (!periodData) {
-      // Clear manual override → will fall back to auto
-      await supabase.from('invoice_periods').delete().eq('invoice_id', invoiceId).eq('source', 'manual')
+      await supabase.from('invoice_periods').delete().eq('invoice_id', invoiceId)
       setPeriods((prev) => {
         const next = { ...prev }
         delete next[invoiceId]
