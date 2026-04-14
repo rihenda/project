@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
   const year = url.searchParams.get('year') || String(new Date().getFullYear())
   const month = url.searchParams.get('month') // "1"-"12" or null
+  const all = url.searchParams.get('all') === 'true' // fetch all pages for a year
   const page = parseInt(url.searchParams.get('page') || '1', 10)
 
   if (!PENNYLANE_TOKEN) {
@@ -71,24 +72,24 @@ Deno.serve(async (req) => {
     let dateTo: string
     let per_page: number
 
+    const fetchAll = month || all
+
     if (month) {
-      // Month selected → load all invoices for the month in one shot (max ~300)
       const m = parseInt(month, 10)
       dateFrom = `${y}-${pad(m)}-01`
       dateTo = `${y}-${pad(m)}-${daysInMonth(y, m)}`
       per_page = 300
     } else {
-      // Year only → paginate 50/page
       dateFrom = `${y}-01-01`
       dateTo = `${y}-12-31`
-      per_page = 50
+      per_page = all ? 300 : 50
     }
 
     const first = await fetchPage(dateFrom, dateTo, 1, per_page)
     let allInvoices = (first.invoices || []).map(mapInvoice)
 
-    // If month selected and there are more pages, fetch them all
-    if (month && first.total_pages > 1) {
+    // If fetchAll mode and there are more pages, fetch them all
+    if (fetchAll && first.total_pages > 1) {
       const remaining = Array.from({ length: first.total_pages - 1 }, (_, i) => i + 2)
       for (let i = 0; i < remaining.length; i += 5) {
         const batch = remaining.slice(i, i + 5)
@@ -99,10 +100,10 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        invoices: month ? allInvoices : allInvoices,
+        invoices: allInvoices,
         total_invoices: first.total_invoices,
-        total_pages: month ? 1 : first.total_pages,
-        current_page: month ? 1 : first.current_page,
+        total_pages: fetchAll ? 1 : first.total_pages,
+        current_page: fetchAll ? 1 : first.current_page,
         year,
         month: month || null,
       }),

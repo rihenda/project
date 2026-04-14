@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 const NAV_ITEMS = [
   { to: '/fournisseurs', label: 'Fournisseurs' },
   { to: '/factures', label: 'Factures' },
+  { to: '/dashboard', label: 'Dashboard' },
 ]
 
 export default function Navbar() {
