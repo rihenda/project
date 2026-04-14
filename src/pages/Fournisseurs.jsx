@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 
+const SUPABASE_URL = 'https://oqqydrbinqdqqvqbfmrv.supabase.co'
+
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i)
 
@@ -28,7 +30,7 @@ export default function Fournisseurs() {
     setError(null)
     setSuppliers([])
 
-    fetch(`/api/get-suppliers?year=${year}`)
+    fetch(`${SUPABASE_URL}/functions/v1/get-suppliers?year=${year}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return
