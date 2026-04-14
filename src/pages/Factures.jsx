@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { formatPeriod } from '../lib/extractPeriod'
 
@@ -30,10 +31,17 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
   const [open, setOpen] = useState(false)
   const [selYear, setSelYear] = useState(CURRENT_YEAR)
   const [selMonth, setSelMonth] = useState(null)
-  const ref = useRef(null)
+  const btnRef = useRef(null)
+  const dropRef = useRef(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
 
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const h = (e) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        dropRef.current && !dropRef.current.contains(e.target)
+      ) setOpen(false)
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
@@ -45,6 +53,8 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
   const label = formatPeriod(displayed)
 
   function openPicker() {
+    const rect = btnRef.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX })
     setSelYear(displayed?.year || CURRENT_YEAR)
     setSelMonth(displayed?.month || null)
     setOpen(true)
@@ -62,8 +72,9 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div>
       <button
+        ref={btnRef}
         onClick={openPicker}
         className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 transition-colors ${
           label
@@ -83,8 +94,12 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
         )}
       </button>
 
-      {open && (
-        <div className="absolute z-50 left-0 top-8 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-3">
+      {open && createPortal(
+        <div
+          ref={dropRef}
+          style={{ position: 'absolute', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-3"
+        >
           {/* Year selector */}
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => setSelYear(y => y - 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500">
@@ -135,7 +150,8 @@ function PeriodCell({ invoice, savedPeriod, onSave }) {
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
