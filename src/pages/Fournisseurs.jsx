@@ -18,7 +18,7 @@ function fmt(amount) {
 }
 
 // ── Category pill ────────────────────────────────────────────────────────────
-function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign }) {
+function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign, syncing }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef(null)
@@ -43,16 +43,25 @@ function CategoryCell({ supplier, categories, onAssign, onCreateAndAssign }) {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => !syncing && setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
           current ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-        }`}
+        } ${syncing ? 'opacity-70 cursor-wait' : ''}`}
         style={current ? { backgroundColor: current.color } : {}}
       >
-        {current ? current.name : '+ Catégorie'}
-        <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        {syncing ? (
+          <>
+            <span className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+            Sync…
+          </>
+        ) : (
+          <>
+            {current ? current.name : '+ Catégorie'}
+            <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </>
+        )}
       </button>
 
       {open && (
@@ -181,10 +190,23 @@ export default function Fournisseurs() {
 
     // Optimistic update
     setSuppliers((prev) =>
-      prev.map((s) => s.source_id === supplier.source_id ? { ...s, category_id } : s)
+      prev.map((s) => s.source_id === supplier.source_id ? { ...s, category_id, syncing: true } : s)
     )
 
-    if (category_id) {
+    if (category_id && category.pennylane_source_id) {
+      // Push to Pennylane + Supabase via Edge Function
+      await fetch(`${SUPABASE_URL}/functions/v1/update-supplier-category`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplier_source_id: supplier.source_id,
+          supplier_name: supplier.name,
+          category_id,
+          pennylane_category_source_id: category.pennylane_source_id,
+        }),
+      })
+    } else if (category_id) {
+      // Custom category (no Pennylane source) — Supabase only
       await supabase.from('supplier_categories').upsert({
         supplier_source_id: supplier.source_id,
         supplier_name: supplier.name,
@@ -194,6 +216,10 @@ export default function Fournisseurs() {
     } else {
       await supabase.from('supplier_categories').delete().eq('supplier_source_id', supplier.source_id)
     }
+
+    setSuppliers((prev) =>
+      prev.map((s) => s.source_id === supplier.source_id ? { ...s, syncing: false } : s)
+    )
   }
 
   async function handleCreateAndAssign(supplier, name) {
@@ -333,6 +359,7 @@ export default function Fournisseurs() {
                       categories={categories}
                       onAssign={handleAssign}
                       onCreateAndAssign={handleCreateAndAssign}
+                      syncing={s.syncing}
                     />
                   </td>
                   <td className="px-4 py-3 text-[#64748B]">{s.city || '—'}</td>
