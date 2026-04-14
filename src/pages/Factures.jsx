@@ -11,11 +11,12 @@ const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','A
 const MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
 
 const PAYMENT_STATUS = {
-  to_be_paid:      { label: 'À payer',   color: 'bg-orange-100 text-orange-700' },
-  to_be_processed: { label: 'À traiter', color: 'bg-yellow-100 text-yellow-700' },
-  paid:            { label: 'Payée',      color: 'bg-green-100 text-green-700' },
-  cancelled:       { label: 'Annulée',    color: 'bg-slate-100 text-slate-500' },
-  unpaid:          { label: 'Impayée',    color: 'bg-red-100 text-red-700' },
+  to_be_paid:      { label: 'À payer',   dot: 'bg-amber-400',   text: 'text-amber-700' },
+  to_be_processed: { label: 'À traiter', dot: 'bg-blue-400',    text: 'text-blue-700' },
+  paid:            { label: 'Payée',     dot: 'bg-emerald-400', text: 'text-emerald-700' },
+  cancelled:       { label: 'Annulée',   dot: 'bg-slate-300',   text: 'text-slate-500' },
+  unpaid:          { label: 'Impayée',   dot: 'bg-red-400',     text: 'text-red-600' },
+  paid_offline:    { label: 'Payée',     dot: 'bg-emerald-400', text: 'text-emerald-700' },
 }
 
 function fmt(n) {
@@ -422,38 +423,39 @@ export default function Factures() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {invoices.map((inv) => {
-                    const status = PAYMENT_STATUS[inv.payment_status] || { label: inv.payment_status || '—', color: 'bg-slate-100 text-slate-500' }
+                    const status = PAYMENT_STATUS[inv.payment_status] || { label: inv.payment_status || '—', dot: 'bg-slate-300', text: 'text-slate-500' }
                     return (
-                      <tr key={inv.id} className="hover:bg-slate-50/70 transition-colors group">
-                        <td className="px-5 py-3.5 text-[13px] text-slate-500 whitespace-nowrap tabular-nums">{fmtDate(inv.date)}</td>
-                        <td className="px-5 py-3.5">
+                      <tr key={inv.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-5 py-4 text-[13px] text-slate-500 whitespace-nowrap tabular-nums">{fmtDate(inv.date)}</td>
+                        <td className="px-5 py-4">
                           <PeriodCell invoice={inv} savedPeriod={periods[inv.id] || null} onSave={handleSavePeriod} />
                         </td>
-                        <td className="px-5 py-3.5 font-mono text-[12px] text-slate-600">{inv.invoice_number || '—'}</td>
-                        <td className="px-5 py-3.5 max-w-[160px]">
-                          <span className="text-[13px] font-semibold text-slate-800 truncate block" title={inv.supplier_name}>
+                        <td className="px-5 py-4 font-mono text-[12px] text-slate-400">{inv.invoice_number || '—'}</td>
+                        <td className="px-5 py-4 max-w-[180px]">
+                          <span className="text-[13px] font-semibold text-slate-900 truncate block" title={inv.supplier_name}>
                             {inv.supplier_name}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-5 py-4">
                           {inv.categories?.[0] ? (
-                            <span className="text-[12px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                            <span className="text-[12px] text-slate-500 bg-slate-100 px-2 py-1 rounded-md font-medium">
                               {inv.categories[0].label}
                             </span>
-                          ) : <span className="text-slate-300">—</span>}
+                          ) : <span className="text-slate-300 text-[13px]">—</span>}
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-semibold ${status.color}`}>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1.5 text-[12.5px] font-medium ${status.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${status.dot}`} />
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5 text-right text-[13px] text-slate-600 tabular-nums">{fmt(inv.amount_ht)}</td>
-                        <td className="px-5 py-3.5 text-right text-[13px] font-bold text-slate-800 tabular-nums">{fmt(inv.amount_ttc)}</td>
-                        <td className="px-5 py-3.5 text-center">
+                        <td className="px-5 py-4 text-right text-[13px] text-slate-500 tabular-nums">{fmt(inv.amount_ht)}</td>
+                        <td className="px-5 py-4 text-right text-[13px] font-semibold text-slate-900 tabular-nums">{fmt(inv.amount_ttc)}</td>
+                        <td className="px-5 py-4 text-center">
                           {inv.file_url ? (
                             <button
                               onClick={() => setPdfUrl(inv.file_url)}
-                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB] hover:text-white text-slate-400 transition-all inline-flex items-center justify-center opacity-0 group-hover:opacity-100"
+                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2563EB] hover:text-white text-slate-400 transition-all inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100"
                               title="Voir le PDF">
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

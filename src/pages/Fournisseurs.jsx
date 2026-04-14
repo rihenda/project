@@ -255,40 +255,52 @@ export default function Fournisseurs() {
     .filter((s) => filterCat === 'all' || s.category_id === filterCat || (filterCat === 'none' && !s.category_id))
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#0F172A]">Fournisseurs</h1>
-        <p className="text-sm text-[#64748B] mt-1">
-          Fournisseurs ayant au moins une facture sur l'année sélectionnée
-        </p>
+    <div className="min-h-screen">
+      {/* Page header */}
+      <div className="bg-white border-b border-slate-200 px-8 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-xs text-slate-400 mb-1 font-medium">
+              <span>HostnFly</span>
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <span>Fournisseurs</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Fournisseurs</h1>
+          </div>
+          {!loading && (
+            <span className="text-xs text-slate-400">
+              {filtered.length} fournisseur{filtered.length > 1 ? 's' : ''} · {year}
+            </span>
+          )}
+        </div>
       </div>
 
+      <div className="px-8 py-5">
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-5">
         {/* Year */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
-          <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors">
+          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer"
+            className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none cursor-pointer"
           >
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
 
         {/* Category filter */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
-          <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors">
+          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
           </svg>
           <select
             value={filterCat}
             onChange={(e) => setFilterCat(e.target.value)}
-            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer"
+            className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none cursor-pointer max-w-[220px]"
           >
             <option value="all">Toutes les catégories</option>
             <option value="none">Sans catégorie</option>
@@ -297,63 +309,54 @@ export default function Fournisseurs() {
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm flex-1 max-w-xs">
-          <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors flex-1 max-w-xs">
+          <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
-            placeholder="Rechercher un fournisseur..."
+            placeholder="Rechercher un fournisseur…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="text-sm text-[#0F172A] bg-transparent outline-none w-full placeholder-slate-400"
+            className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none w-full placeholder:font-normal placeholder:text-slate-400"
           />
         </div>
-
-        {!loading && (
-          <span className="text-sm text-[#64748B] ml-auto">
-            <span className="font-semibold text-[#0F172A]">{filtered.length}</span> fournisseur{filtered.length > 1 ? 's' : ''}
-          </span>
-        )}
       </div>
 
-      {/* States */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[#64748B]">Chargement des fournisseurs {year}…</p>
+        <div className="flex flex-col items-center justify-center py-32 gap-3">
+          <div className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[13px] text-slate-400">Chargement des fournisseurs {year}…</p>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">
           Erreur : {error}
         </div>
       )}
 
-      {/* Table */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Fournisseur</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Catégorie</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Ville</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">N° TVA</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Conditions</th>
-                <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Factures</th>
-                <th className="text-right px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Montant HT</th>
+              <tr className="border-b border-slate-100">
+                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Fournisseur</th>
+                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Catégorie</th>
+                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Ville</th>
+                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">N° TVA</th>
+                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Conditions</th>
+                <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Factures</th>
+                <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Montant HT</th>
               </tr>
             </thead>
-            <tbody>
-              {filtered.map((s, i) => (
-                <tr
-                  key={s.source_id}
-                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/50'}`}
-                >
-                  <td className="px-4 py-3 font-medium text-[#0F172A]">{s.name}</td>
-                  <td className="px-4 py-3">
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((s) => (
+                <tr key={s.source_id} className="hover:bg-slate-50/60 transition-colors">
+                  <td className="px-5 py-4">
+                    <span className="text-[13px] font-semibold text-slate-900">{s.name}</span>
+                  </td>
+                  <td className="px-5 py-4">
                     <CategoryCell
                       supplier={s}
                       categories={categories}
@@ -362,17 +365,17 @@ export default function Fournisseurs() {
                       syncing={s.syncing}
                     />
                   </td>
-                  <td className="px-4 py-3 text-[#64748B]">{s.city || '—'}</td>
-                  <td className="px-4 py-3 text-[#64748B] font-mono text-xs">{s.vat_number || '—'}</td>
-                  <td className="px-4 py-3 text-[#64748B]">
+                  <td className="px-5 py-4 text-[13px] text-slate-500">{s.city || '—'}</td>
+                  <td className="px-5 py-4 font-mono text-[12px] text-slate-400">{s.vat_number || '—'}</td>
+                  <td className="px-5 py-4 text-[13px] text-slate-500">
                     {PAYMENT_LABELS[s.payment_conditions] || s.payment_conditions || '—'}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="inline-flex items-center justify-center bg-[#2563EB]/10 text-[#2563EB] font-semibold rounded-full px-2 py-0.5 text-xs min-w-[28px]">
+                  <td className="px-5 py-4 text-right">
+                    <span className="inline-flex items-center justify-center bg-[#2563EB]/10 text-[#2563EB] font-semibold rounded-full px-2 py-0.5 text-[12px] min-w-[28px]">
                       {s.invoice_count}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-[#0F172A]">
+                  <td className="px-5 py-4 text-right text-[13px] font-semibold text-slate-900">
                     {fmt(s.total_amount)}
                   </td>
                 </tr>
@@ -383,16 +386,28 @@ export default function Fournisseurs() {
       )}
 
       {!loading && !error && filtered.length === 0 && suppliers.length > 0 && (
-        <div className="text-center py-16 text-[#64748B]">
-          Aucun résultat pour cette recherche
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <p className="text-[13px] font-semibold text-slate-500">Aucun résultat</p>
         </div>
       )}
 
       {!loading && !error && suppliers.length === 0 && (
-        <div className="text-center py-16 text-[#64748B]">
-          Aucune facture fournisseur trouvée pour {year}
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <p className="text-[13px] font-semibold text-slate-500">Aucune facture fournisseur</p>
+          <p className="text-[12px] text-slate-400 mt-0.5">{year}</p>
         </div>
       )}
+      </div>
     </div>
   )
 }
