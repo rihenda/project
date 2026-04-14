@@ -197,11 +197,20 @@ function Pagination({ current, total, onChange }) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function Factures() {
   const [year, setYear] = useState(CURRENT_YEAR)
+  const [month, setMonth] = useState(null)   // null = tous les mois
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [periods, setPeriods] = useState({}) // invoice_id → row
+  const [periods, setPeriods] = useState({})
+  const [filterCat, setFilterCat] = useState('all')
+  const [categories, setCategories] = useState([])
+
+  // Load categories from Supabase once
+  useEffect(() => {
+    supabase.from('categories').select('id,name,pennylane_source_id').order('name')
+      .then(({ data }) => { if (data) setCategories(data) })
+  }, [])
 
   // Load invoices
   useEffect(() => {
@@ -209,7 +218,10 @@ export default function Factures() {
     setLoading(true)
     setError(null)
 
-    fetch(`${SUPABASE_URL}/functions/v1/get-invoices?year=${year}&page=${page}`)
+    const params = new URLSearchParams({ year, page })
+    if (month) params.set('month', month)
+
+    fetch(`${SUPABASE_URL}/functions/v1/get-invoices?${params}`)
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return
@@ -220,7 +232,7 @@ export default function Factures() {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [year, page])
+  }, [year, month, page])
 
   // Load saved periods from Supabase when invoices change
   useEffect(() => {
@@ -254,9 +266,19 @@ export default function Factures() {
     }
   }
 
-  function handleYearChange(y) { setYear(y); setPage(1) }
+  function handleYearChange(y) { setYear(Number(y)); setMonth(null); setPage(1); setFilterCat('all') }
+  function handleMonthChange(m) { setMonth(m); setPage(1) }
 
-  const invoices = data?.invoices || []
+  // Client-side category filter (applied on top of server-side date filter)
+  const allInvoices = data?.invoices || []
+  const invoices = filterCat === 'all'
+    ? allInvoices
+    : allInvoices.filter((inv) =>
+        inv.categories.some((c) => {
+          const cat = categories.find((k) => k.pennylane_source_id === c.source_id)
+          return cat?.id === filterCat
+        })
+      )
 
   return (
     <div className="p-6 max-w-7xl mx-auto w-full">
@@ -271,19 +293,64 @@ export default function Factures() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+
+        {/* Year */}
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
           <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <select value={year} onChange={(e) => handleYearChange(Number(e.target.value))}
+          <select value={year} onChange={(e) => handleYearChange(e.target.value)}
             className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer">
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        {data && (
+
+        {/* Month */}
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm">
+          <button
+            onClick={() => handleMonthChange(null)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              !month ? 'bg-[#2563EB] text-white' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            Tous
+          </button>
+          {MONTHS_SHORT.map((mo, i) => (
+            <button
+              key={i}
+              onClick={() => handleMonthChange(month === i + 1 ? null : i + 1)}
+              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                month === i + 1 ? 'bg-[#2563EB] text-white' : 'text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              {mo}
+            </button>
+          ))}
+        </div>
+
+        {/* Category */}
+        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
+          <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)}
+            className="text-sm font-medium text-[#0F172A] bg-transparent outline-none cursor-pointer max-w-[200px]">
+            <option value="all">Toutes les catégories</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+
+        {/* Count */}
+        {data && !loading && (
           <span className="text-sm text-[#64748B] ml-auto">
-            Page <span className="font-semibold text-[#0F172A]">{data.current_page}</span> / {data.total_pages}
+            {filterCat !== 'all' ? (
+              <><span className="font-semibold text-[#0F172A]">{invoices.length}</span> / {allInvoices.length} factures</>
+            ) : month ? (
+              <><span className="font-semibold text-[#0F172A]">{allInvoices.length}</span> factures en {MONTHS_FR[month - 1]} {year}</>
+            ) : (
+              <>Page <span className="font-semibold text-[#0F172A]">{data.current_page}</span> / {data.total_pages}</>
+            )}
           </span>
         )}
       </div>
@@ -368,11 +435,13 @@ export default function Factures() {
             </table>
           </div>
 
-          <Pagination
-            current={page}
-            total={data.total_pages}
-            onChange={(p) => { setPage(p); window.scrollTo(0, 0) }}
-          />
+          {!month && (
+            <Pagination
+              current={page}
+              total={data.total_pages}
+              onChange={(p) => { setPage(p); window.scrollTo(0, 0) }}
+            />
+          )}
         </>
       )}
 
