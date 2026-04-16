@@ -7,9 +7,9 @@ import './index.css'
 function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-[#F1F5F9]">
+      <div className="flex min-h-screen bg-[#F7F8FA]">
         <Sidebar />
-        <main className="flex-1 ml-[224px] min-h-screen">
+        <main className="flex-1 ml-60 min-h-screen">
           <Routes>
             <Route path="/" element={<Navigate to="/fournisseurs" replace />} />
             <Route path="/fournisseurs" element={<Fournisseurs />} />

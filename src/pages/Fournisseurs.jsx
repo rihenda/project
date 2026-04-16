@@ -255,108 +255,99 @@ export default function Fournisseurs() {
     .filter((s) => filterCat === 'all' || s.category_id === filterCat || (filterCat === 'none' && !s.category_id))
 
   return (
-    <div className="min-h-screen">
-      {/* Page header */}
-      <div className="bg-white border-b border-slate-200 px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-slate-400 mb-1 font-medium">
-              <span>HostnFly</span>
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              <span>Fournisseurs</span>
-            </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Fournisseurs</h1>
-          </div>
-          {!loading && (
-            <span className="text-xs text-slate-400">
-              {filtered.length} fournisseur{filtered.length > 1 ? 's' : ''} · {year}
-            </span>
-          )}
+    <div className="min-h-screen bg-[#F7F8FA]">
+
+      {/* ── Top bar ────────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-slate-200/80 px-8 h-16 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[15px] font-semibold text-slate-900">Fournisseurs</h1>
+          <span className="text-slate-300 text-lg font-light select-none">·</span>
+          <span className="text-[13px] text-slate-400 font-medium">{year}</span>
+          {loading && <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin ml-1" />}
         </div>
+        {!loading && suppliers.length > 0 && (
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Fournisseurs</span>
+            <span className="text-[13px] font-bold text-slate-800 tabular-nums">{filtered.length}</span>
+          </div>
+        )}
       </div>
 
       <div className="px-8 py-5">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
+      {/* ── Filters ────────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 mb-5">
         {/* Year */}
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors">
-          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none cursor-pointer"
-          >
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
+        <select
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          className="h-8 px-3 bg-white border border-slate-200 rounded-lg text-[12.5px] font-semibold text-slate-700 outline-none cursor-pointer hover:border-slate-300 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+        >
+          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
 
         {/* Category filter */}
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors">
-          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-          </svg>
-          <select
-            value={filterCat}
-            onChange={(e) => setFilterCat(e.target.value)}
-            className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none cursor-pointer max-w-[220px]"
-          >
-            <option value="all">Toutes les catégories</option>
-            <option value="none">Sans catégorie</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
+        <select
+          value={filterCat}
+          onChange={(e) => setFilterCat(e.target.value)}
+          className="h-8 px-3 bg-white border border-slate-200 rounded-lg text-[12.5px] font-semibold text-slate-700 outline-none cursor-pointer hover:border-slate-300 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)] max-w-[210px]"
+        >
+          <option value="all">Toutes les catégories</option>
+          <option value="none">Sans catégorie</option>
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
 
         {/* Search */}
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-colors flex-1 max-w-xs">
+        <div className="flex items-center gap-2 h-8 bg-white border border-slate-200 rounded-lg px-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-slate-300 transition-colors w-60">
           <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
-            placeholder="Rechercher un fournisseur…"
+            placeholder="Rechercher…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="text-[13px] font-semibold text-slate-700 bg-transparent outline-none w-full placeholder:font-normal placeholder:text-slate-400"
+            className="text-[12.5px] font-semibold text-slate-700 bg-transparent outline-none w-full placeholder:font-normal placeholder:text-slate-400"
           />
         </div>
       </div>
 
+      {/* ── Loading ───────────────────────────────────────────────────────── */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-32 gap-3">
-          <div className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[13px] text-slate-400">Chargement des fournisseurs {year}…</p>
+          <div className="w-6 h-6 border-[2.5px] border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+          <p className="text-[12px] text-slate-400 font-medium">Chargement…</p>
         </div>
       )}
 
+      {/* ── Error ─────────────────────────────────────────────────────────── */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-[13px]">
           Erreur : {error}
         </div>
       )}
 
+      {/* ── Table ─────────────────────────────────────────────────────────── */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Fournisseur</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Catégorie</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Ville</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">N° TVA</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Conditions</th>
-                <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Factures</th>
-                <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.07em]">Montant HT</th>
+                <th className="text-left px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">Fournisseur</th>
+                <th className="text-left px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">Catégorie</th>
+                <th className="text-left px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">Ville</th>
+                <th className="text-left px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">N° TVA</th>
+                <th className="text-left px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">Conditions</th>
+                <th className="text-right px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">Factures</th>
+                <th className="text-right px-5 py-3 text-[10.5px] font-semibold text-slate-400 uppercase tracking-widest">Montant HT</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {filtered.map((s) => (
-                <tr key={s.source_id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="px-5 py-4">
+                <tr key={s.source_id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors">
+                  <td className="px-5 py-3.5">
                     <span className="text-[13px] font-semibold text-slate-900">{s.name}</span>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-3.5">
                     <CategoryCell
                       supplier={s}
                       categories={categories}
@@ -365,17 +356,17 @@ export default function Fournisseurs() {
                       syncing={s.syncing}
                     />
                   </td>
-                  <td className="px-5 py-4 text-[13px] text-slate-500">{s.city || '—'}</td>
-                  <td className="px-5 py-4 font-mono text-[12px] text-slate-400">{s.vat_number || '—'}</td>
-                  <td className="px-5 py-4 text-[13px] text-slate-500">
+                  <td className="px-5 py-3.5 text-[12.5px] text-slate-400">{s.city || '—'}</td>
+                  <td className="px-5 py-3.5 font-mono text-[11.5px] text-slate-400">{s.vat_number || '—'}</td>
+                  <td className="px-5 py-3.5 text-[12.5px] text-slate-500">
                     {PAYMENT_LABELS[s.payment_conditions] || s.payment_conditions || '—'}
                   </td>
-                  <td className="px-5 py-4 text-right">
-                    <span className="inline-flex items-center justify-center bg-[#2563EB]/10 text-[#2563EB] font-semibold rounded-full px-2 py-0.5 text-[12px] min-w-[28px]">
+                  <td className="px-5 py-3.5 text-right">
+                    <span className="inline-flex items-center justify-center bg-slate-100 text-slate-600 font-semibold rounded-md px-2 py-0.5 text-[12px] min-w-[28px]">
                       {s.invoice_count}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-right text-[13px] font-semibold text-slate-900">
+                  <td className="px-5 py-3.5 text-right text-[13px] font-bold text-slate-800 tabular-nums">
                     {fmt(s.total_amount)}
                   </td>
                 </tr>
@@ -385,11 +376,12 @@ export default function Fournisseurs() {
         </div>
       )}
 
+      {/* ── Empty ─────────────────────────────────────────────────────────── */}
       {!loading && !error && filtered.length === 0 && suppliers.length > 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-            <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           <p className="text-[13px] font-semibold text-slate-500">Aucun résultat</p>
@@ -398,8 +390,8 @@ export default function Fournisseurs() {
 
       {!loading && !error && suppliers.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-            <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
